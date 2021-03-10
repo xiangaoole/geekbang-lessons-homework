@@ -20,13 +20,13 @@ public class TestingListener implements ServletContextListener {
 
     @Override
     public void contextInitialized(ServletContextEvent sce) {
-        ComponentContext context = ComponentContext.getInstance();
-        DBConnectionManager dbConnectionManager = context.getComponent("bean/DBConnectionManager");
-        dbConnectionManager.getConnection();
-        testUser(dbConnectionManager.getEntityManager());
-        logger.info("所有的 JNDI 组件名称：[");
-        context.getComponentNames().forEach(logger::info);
-        logger.info("]");
+//        ComponentContext context = ComponentContext.getInstance();
+//        DBConnectionManager dbConnectionManager = context.getComponent("bean/DBConnectionManager");
+//        dbConnectionManager.getConnection();
+//        testUser(dbConnectionManager.getEntityManager());
+//        logger.info("所有的 JNDI 组件名称：[");
+//        context.getComponentNames().forEach(logger::info);
+//        logger.info("]");
     }
 
     private void testUser(EntityManager entityManager) {
