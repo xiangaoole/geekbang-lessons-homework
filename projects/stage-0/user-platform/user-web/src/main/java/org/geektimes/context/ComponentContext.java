@@ -1,5 +1,6 @@
 package org.geektimes.context;
 
+import org.geektimes.di.DependencyInjection;
 import org.geektimes.function.ThrowableAction;
 import org.geektimes.function.ThrowableFunction;
 
@@ -7,7 +8,9 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
 import javax.naming.*;
+import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
 import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.logging.Logger;
@@ -16,7 +19,7 @@ import java.util.stream.Stream;
 /**
  * 组件上下文（Web 应用全局使用）
  */
-public class ComponentContext {
+public class ComponentContext implements ServletContainerInitializer {
 
     public static final String CONTEXT_NAME = ComponentContext.class.getName();
 
@@ -56,7 +59,7 @@ public class ComponentContext {
         }
     }
 
-    public void init(ServletContext servletContext) throws RuntimeException {
+    private void init(ServletContext servletContext) throws RuntimeException {
         ComponentContext.servletContext = servletContext;
         servletContext.setAttribute(CONTEXT_NAME, this);
         // 获取当前 ServletContext（WebApp）ClassLoader
@@ -85,58 +88,7 @@ public class ComponentContext {
      * </ol>
      */
     protected void initializeComponents() {
-        componentsMap.values().forEach(component -> {
-            Class<?> componentClass = component.getClass();
-            // 注入阶段 - {@link Resource}
-            injectComponents(component, componentClass);
-            // 初始阶段 - {@link PostConstruct}
-            processPostConstruct(component, componentClass);
-            // TODO 实现销毁阶段 - {@link PreDestroy}
-            processPreDestroy();
-        });
-    }
-
-    private void injectComponents(Object component, Class<?> componentClass) {
-        Stream.of(componentClass.getDeclaredFields())
-                .filter(field -> {
-                    int mods = field.getModifiers();
-                    return !Modifier.isStatic(mods) &&
-                            field.isAnnotationPresent(Resource.class);
-                }).forEach(field -> {
-            Resource resource = field.getAnnotation(Resource.class);
-            String resourceName = resource.name();
-            Object injectedObject = lookupComponent(resourceName);
-            field.setAccessible(true);
-            try {
-                // 注入目标对象
-                field.set(component, injectedObject);
-            } catch (IllegalAccessException e) {
-            }
-        });
-    }
-
-    private void processPostConstruct(Object component, Class<?> componentClass) {
-        Stream.of(componentClass.getMethods())
-                .filter(method ->
-                        !Modifier.isStatic(method.getModifiers()) &&      // 非 static
-                                method.getParameterCount() == 0 &&        // 没有参数
-                                method.isAnnotationPresent(PostConstruct.class) // 标注 @PostConstruct
-                ).forEach(method -> {
-            // 执行目标方法
-            try {
-                method.invoke(component);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
-    }
-
-    private void processPreDestroy() {
-        // TODO: 通过 ShutdownHook 实现
-        Runtime.getRuntime().addShutdownHook(new Thread(()->{
-            // 逐一调用这
-            componentsMap.values();
-        }));
+        new DependencyInjection(componentsMap).inject();
     }
 
     /**
@@ -253,5 +205,10 @@ public class ComponentContext {
         } finally {
             close(context);
         }
+    }
+
+    @Override
+    public void onStartup(Set<Class<?>> c, ServletContext ctx) throws ServletException {
+        init(ctx);
     }
 }

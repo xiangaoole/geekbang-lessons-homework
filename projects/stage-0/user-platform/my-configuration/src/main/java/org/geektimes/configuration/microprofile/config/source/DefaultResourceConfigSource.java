@@ -21,7 +21,7 @@ public class DefaultResourceConfigSource extends MapBasedConfigSource {
         ClassLoader classLoader = getClass().getClassLoader();
         URL resource = classLoader.getResource(configFileLocation);
         if (resource == null) {
-            logger.info("The default config file can't be found in the classpath : " + configFileLocation);
+            System.out.println("The default config file can't be found in the classpath : " + configFileLocation);
             return;
         }
         try (InputStream inputStream = resource.openStream()) {

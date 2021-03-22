@@ -8,19 +8,23 @@ import java.util.Map;
 
 public class ServletContextConfigSource extends MapBasedConfigSource {
 
-    private final ServletContext servletContext;
+    private Map<String, String> configData;
 
     public ServletContextConfigSource(ServletContext servletContext) {
         super("ServletContext Init Parameters", 500);
-        this.servletContext = servletContext;
+
+        // TODO: ugly solution
+        assert configData != null;
+        Enumeration<String> nameEnum = servletContext.getInitParameterNames();
+        while (nameEnum.hasMoreElements()) {
+            String name = nameEnum.nextElement();
+            configData.put(name, servletContext.getInitParameter(name));
+        }
+        configData = null;
     }
 
     @Override
     protected void prepareConfigData(Map configData) throws Throwable {
-        Enumeration<String> parameterNames = servletContext.getInitParameterNames();
-        while (parameterNames.hasMoreElements()) {
-            String parameterName = parameterNames.nextElement();
-            configData.put(parameterName, servletContext.getInitParameter(parameterName));
-        }
+        this.configData = configData;
     }
 }
