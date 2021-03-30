@@ -9,6 +9,8 @@ public class DefaultSubscriber<T> implements Subscriber<T> {
 
     private int count = 0;
 
+    private final int MAX_COUNT = 2;
+
     @Override
     public void onSubscribe(Subscription s) {
         this.subscription = s;
@@ -16,11 +18,11 @@ public class DefaultSubscriber<T> implements Subscriber<T> {
 
     @Override
     public void onNext(Object o) {
-        if (++count > 2) { // 当到达数据阈值时，取消 Publisher 给当前 Subscriber 发送数据
-            subscription.cancel();
-            return;
-        }
         System.out.println("收到数据：" + o);
+        count++;
+        if (count >= MAX_COUNT) { // 当到达数据阈值时，取消 Publisher 给当前 Subscriber 发送数据
+            subscription.cancel();
+        }
     }
 
     @Override

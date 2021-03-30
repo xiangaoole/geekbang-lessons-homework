@@ -90,6 +90,12 @@
             <artifactId>activemq-all</artifactId>
         </dependency>
 
+        <!-- Independence Injection -->
+        <dependency>
+            <groupId>javax.annotation</groupId>
+            <artifactId>javax.annotation-api</artifactId>
+        </dependency>
+
 
         <dependency>
             <groupId>junit</groupId>

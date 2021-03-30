@@ -56,6 +56,15 @@
         <url-pattern>/</url-pattern>
     </servlet-mapping>
 
+    <servlet>
+        <servlet-name>RegisterServlet</servlet-name>
+        <servlet-class>org.geektimes.projects.user.web.servlet.RegisterServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>RegisterServlet</servlet-name>
+        <url-pattern>/RegisterServlet</url-pattern>
+    </servlet-mapping>
+
     <filter>
         <filter-name>CharsetEncodingFilter</filter-name>
         <filter-class>org.geektimes.projects.user.web.filter.CharsetEncodingFilter</filter-class>
