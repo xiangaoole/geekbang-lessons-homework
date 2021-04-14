@@ -1,5 +1,6 @@
 package org.geektimes.cache.redis;
 
+import io.lettuce.core.codec.RedisCodec;
 import org.geektimes.cache.AbstractCache;
 import org.geektimes.cache.ExpirableEntry;
 import redis.clients.jedis.Jedis;
@@ -8,45 +9,50 @@ import javax.cache.CacheException;
 import javax.cache.CacheManager;
 import javax.cache.configuration.Configuration;
 import java.io.*;
+import java.nio.ByteBuffer;
 import java.util.Set;
 
 public class JedisCache<K extends Serializable, V extends Serializable> extends AbstractCache<K, V> {
 
     private final Jedis jedis;
 
+    private final RedisCodec<K, V> codec;
+
     public JedisCache(CacheManager cacheManager, String cacheName,
-                      Configuration<K, V> configuration, Jedis jedis) {
+                      Configuration<K, V> configuration, Jedis jedis,
+                      RedisCodec<K, V> codec) {
         super(cacheManager, cacheName, configuration);
         this.jedis = jedis;
+        this.codec = codec;
     }
 
     @Override
     protected boolean containsEntry(K key) throws CacheException, ClassCastException {
-        byte[] keyBytes = serialize(key);
+        byte[] keyBytes = serializeKey(key);
         return jedis.exists(keyBytes);
     }
 
     @Override
     protected ExpirableEntry<K, V> getEntry(K key) throws CacheException, ClassCastException {
-        byte[] keyBytes = serialize(key);
+        byte[] keyBytes = serializeKey(key);
         return getEntry(keyBytes);
     }
 
     protected ExpirableEntry<K, V> getEntry(byte[] keyBytes) throws CacheException, ClassCastException {
         byte[] valueBytes = jedis.get(keyBytes);
-        return ExpirableEntry.of(deserialize(keyBytes), deserialize(valueBytes));
+        return ExpirableEntry.of(deserializeKey(keyBytes), deserializeValue(valueBytes));
     }
 
     @Override
     protected void putEntry(ExpirableEntry<K, V> entry) throws CacheException, ClassCastException {
-        byte[] keyBytes = serialize(entry.getKey());
-        byte[] valueBytes = serialize(entry.getValue());
+        byte[] keyBytes = serializeKey(entry.getKey());
+        byte[] valueBytes = serializeValue(entry.getValue());
         jedis.set(keyBytes, valueBytes);
     }
 
     @Override
     protected ExpirableEntry<K, V> removeEntry(K key) throws CacheException, ClassCastException {
-        byte[] keyBytes = serialize(key);
+        byte[] keyBytes = serializeKey(key);
         ExpirableEntry<K, V> oldEntry = getEntry(keyBytes);
         jedis.del(keyBytes);
         return oldEntry;
@@ -69,35 +75,22 @@ public class JedisCache<K extends Serializable, V extends Serializable> extends 
         this.jedis.close();
     }
 
-    // 是否可以抽象出一套序列化和反序列化的 API
-    private byte[] serialize(Object value) throws CacheException {
-        byte[] bytes = null;
-        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-             ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream)
-        ) {
-            // Key -> byte[]
-            objectOutputStream.writeObject(value);
-            bytes = outputStream.toByteArray();
-        } catch (IOException e) {
-            throw new CacheException(e);
-        }
-        return bytes;
+    // encode and decode
+
+    private byte[] serializeKey(K key) {
+        return codec.encodeKey(key).array();
     }
 
-    private <T> T deserialize(byte[] bytes) throws CacheException {
-        if (bytes == null) {
-            return null;
-        }
-        T value = null;
-        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes);
-             ObjectInputStream objectInputStream = new ObjectInputStream(inputStream)
-        ) {
-            // byte[] -> Value
-            value = (T) objectInputStream.readObject();
-        } catch (Exception e) {
-            throw new CacheException(e);
-        }
-        return value;
+    private byte[] serializeValue(V value) {
+        return codec.encodeValue(value).array();
+    }
+
+    private K deserializeKey(byte[] bytes) {
+        return codec.decodeKey(ByteBuffer.wrap(bytes));
+    }
+
+    private V deserializeValue(byte[] bytes) {
+        return codec.decodeValue(ByteBuffer.wrap(bytes));
     }
 
 }

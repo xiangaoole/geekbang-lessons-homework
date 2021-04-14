@@ -1,6 +1,8 @@
 package org.geektimes.cache.redis;
 
+import io.lettuce.core.codec.RedisCodec;
 import org.geektimes.cache.AbstractCacheManager;
+import org.geektimes.cache.redis.codec.MyRedisCodec;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
@@ -25,7 +27,10 @@ public class JedisCacheManager extends AbstractCacheManager {
     @Override
     protected <K, V, C extends Configuration<K, V>> Cache doCreateCache(String cacheName, C configuration) {
         Jedis jedis = jedisPool.getResource();
-        return new JedisCache(this, cacheName, configuration, jedis);
+        Class<K> keyType = configuration.getKeyType();
+        Class<V> valueType = configuration.getValueType();
+        RedisCodec codec = new MyRedisCodec(keyType, valueType);
+        return new JedisCache(this, cacheName, configuration, jedis, codec);
     }
 
     @Override
